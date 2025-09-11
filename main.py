@@ -32,6 +32,7 @@ def main():
     import matplotlib.font_manager as fm
     from datetime import datetime
 
+
     html_file = 'crawled-page-2023.html'
     dates, heights = parse_tide_heights(html_file)
 
@@ -42,6 +43,7 @@ def main():
     except Exception:
         date_objs = list(range(len(dates)))  # fallback
 
+
     # Set English font (for macOS, fallback to Arial)
     plt.rcParams['font.sans-serif'] = ['Arial', 'Arial Unicode MS', 'DejaVu Sans']
     plt.rcParams['axes.unicode_minus'] = False
@@ -51,7 +53,6 @@ def main():
     ax.set_xlabel('Date-Time', fontsize=14)
     ax.set_ylabel('Tide Height (m)', fontsize=14)
     ax.grid(True, linestyle='--', alpha=0.5)
-    # y-axis increases from bottom to top (default, do not invert)
 
     # Beautify x-axis
     if isinstance(date_objs[0], datetime):
@@ -63,31 +64,22 @@ def main():
         ax.set_xticklabels([dates[i] for i in range(0, len(dates), max(1, len(dates)//10))], rotation=45)
 
     import numpy as np
-    from matplotlib.collections import LineCollection
-
-    # Prepare for rainbow color
-    points = np.array([np.arange(len(heights)), heights]).T.reshape(-1, 1, 2)
-    segments = np.concatenate([points[:-1], points[1:]], axis=1)
-    norm = plt.Normalize(min(heights), max(heights))
-    cmap = plt.get_cmap('rainbow')
-
-    # For animation, we need to update a LineCollection
-    line_collection = LineCollection([], cmap=cmap, norm=norm, linewidth=2, label='Tide Height')
-    ax.add_collection(line_collection)
+    # Bar animation: each bar grows from 0 to its height
+    x = np.arange(len(heights))
+    bar_container = ax.bar(x, np.zeros_like(heights), color=plt.get_cmap('rainbow')(np.linspace(0, 1, len(heights))), width=1.0, align='center', label='Tide Height')
 
     def init():
-        line_collection.set_segments([])
-        line_collection.set_array(np.array([]))
-        return line_collection,
+        for bar in bar_container:
+            bar.set_height(0)
+        return bar_container
 
     def animate(i):
-        if i == 0:
-            return line_collection,
-        segs = segments[:i]
-        vals = heights[:i]
-        line_collection.set_segments(segs)
-        line_collection.set_array(np.array(vals))
-        return line_collection,
+        for idx, bar in enumerate(bar_container):
+            if idx <= i:
+                bar.set_height(heights[idx])
+            else:
+                bar.set_height(0)
+        return bar_container
 
     from matplotlib import animation
     ani = animation.FuncAnimation(fig, animate, init_func=init, frames=len(heights), interval=8, blit=True, repeat=False)
