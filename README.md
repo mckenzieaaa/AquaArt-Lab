@@ -1,9 +1,9 @@
-# Data Visualization Script
+# Tide Height Visualization Script
 
-This project is a standard GitHub Python script example for data visualization, including a basic project structure and sample code. It is suitable for quickly starting data visualization analysis.
+This project provides a Python script for visualizing tide height data from an HTML file. The visualization features a dynamic animated rainbow line that draws from left to right (time), with the y-axis (tide height) increasing from bottom to top. The animation clearly shows the change in tide height over time.
 
 ## File Structure
-- data_viz.py: Main data visualization script, reads CSV and plots charts
+- main.py: Main visualization script, parses HTML and animates the tide chart
 - requirements.txt: Dependency list
 - .gitignore: Ignore files that should not be version controlled
 - README.md: Project description
@@ -15,12 +15,13 @@ This project is a standard GitHub Python script example for data visualization, 
    ```
 2. Run the script:
    ```bash
-   python data_viz.py
+   python main.py
    ```
 
 ## Dependencies
-- pandas
+- beautifulsoup4
 - matplotlib
+- numpy
 
 ## Example
-The script will read a file named `data.csv` and plot a line chart. Please replace or modify the data file as needed.
+The script reads a file named `crawled-page-2023.html` and animates a rainbow-colored tide height line chart. The x-axis represents time, and the y-axis represents tide height (in meters). You can replace or modify the HTML file as needed for your own data.
