@@ -1,0 +1,5 @@
+- [ ] 项目包含标准文件：.env.example、main.py、requirements.txt、README.md、.gitignore
+- [ ] main.py 支持环境变量读取和简单数据可视化
+- [ ] requirements.txt 包含 pandas、matplotlib、python-dotenv
+- [ ] .env.example 提供环境变量示例
+- [ ] 代码结构清晰，易于扩展
