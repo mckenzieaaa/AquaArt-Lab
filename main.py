@@ -12,7 +12,7 @@ def parse_tide_heights(html_file):
         for tr in table.find_all('tr'):
             tds = tr.find_all('td')
             if len(tds) >= 4:
-                # 只取有潮高的行
+                # Only process rows with tide height
                 try:
                     date = f"{tds[0].text.strip()}-{tds[1].text.strip()}"
                     for i in range(3, len(tds), 2):
@@ -35,27 +35,27 @@ def main():
     html_file = 'crawled-page-2023.html'
     dates, heights = parse_tide_heights(html_file)
 
-    # 尝试将日期字符串转为datetime对象，便于横轴美化
+    # Try to convert date strings to datetime objects for better x-axis formatting
     date_fmt = "%m月%d日-%H:%M"
     try:
         date_objs = [datetime.strptime(d, "%m月%d日-%H:%M") for d in dates]
     except Exception:
-        date_objs = list(range(len(dates)))  # 兜底
+        date_objs = list(range(len(dates)))  # fallback
 
-    # 设置中文字体（适配macOS常见字体）
-    plt.rcParams['font.sans-serif'] = ['Heiti TC', 'Arial Unicode MS', 'SimHei']
+    # Set English font (for macOS, fallback to Arial)
+    plt.rcParams['font.sans-serif'] = ['Arial', 'Arial Unicode MS', 'DejaVu Sans']
     plt.rcParams['axes.unicode_minus'] = False
 
     fig, ax = plt.subplots(figsize=(14, 6))
-    ax.set_title('2023赤鱲角潮汐高度', fontsize=18, fontweight='bold')
-    ax.set_xlabel('日期-时间', fontsize=14)
-    ax.set_ylabel('潮高 (m)', fontsize=14)
+    ax.set_title('2023 Chek Lap Kok Tide Height', fontsize=18, fontweight='bold')
+    ax.set_xlabel('Date-Time', fontsize=14)
+    ax.set_ylabel('Tide Height (m)', fontsize=14)
     ax.grid(True, linestyle='--', alpha=0.5)
 
-    # 画点和线
-    ax.plot(date_objs, heights, marker='o', color='#0072B2', linewidth=2, markersize=5, label='潮高')
+    # Plot points and lines
+    ax.plot(date_objs, heights, marker='o', color='#0072B2', linewidth=2, markersize=5, label='Tide Height')
 
-    # 横轴美化
+    # Beautify x-axis
     if isinstance(date_objs[0], datetime):
         ax.xaxis.set_major_locator(mdates.AutoDateLocator())
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d\n%H:%M'))
