@@ -66,8 +66,9 @@ def main():
     import numpy as np
     from matplotlib.collections import LineCollection
 
-    # Prepare for rainbow color
-    points = np.array([np.arange(len(heights)), heights]).T.reshape(-1, 1, 2)
+    # Prepare for rainbow color (x: time, y: height)
+    x_vals = np.arange(len(heights))
+    points = np.array([x_vals, heights]).T.reshape(-1, 1, 2)
     segments = np.concatenate([points[:-1], points[1:]], axis=1)
     norm = plt.Normalize(min(heights), max(heights))
     cmap = plt.get_cmap('rainbow')
@@ -85,7 +86,8 @@ def main():
         if i == 0:
             return line_collection,
         segs = segments[:i]
-        vals = heights[:i]
+        # Use the y value (height) for each segment for coloring
+        vals = [seg[0][1] for seg in segs] if len(segs) > 0 else []
         line_collection.set_segments(segs)
         line_collection.set_array(np.array(vals))
         return line_collection,
