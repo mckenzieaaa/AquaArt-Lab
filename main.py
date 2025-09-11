@@ -64,22 +64,31 @@ def main():
         ax.set_xticklabels([dates[i] for i in range(0, len(dates), max(1, len(dates)//10))], rotation=45)
 
     import numpy as np
-    # Bar animation: each bar grows from 0 to its height
-    x = np.arange(len(heights))
-    bar_container = ax.bar(x, np.zeros_like(heights), color=plt.get_cmap('rainbow')(np.linspace(0, 1, len(heights))), width=1.0, align='center', label='Tide Height')
+    from matplotlib.collections import LineCollection
+
+    # Prepare for rainbow color
+    points = np.array([np.arange(len(heights)), heights]).T.reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+    norm = plt.Normalize(min(heights), max(heights))
+    cmap = plt.get_cmap('rainbow')
+
+    # For animation, we need to update a LineCollection
+    line_collection = LineCollection([], cmap=cmap, norm=norm, linewidth=2, label='Tide Height')
+    ax.add_collection(line_collection)
 
     def init():
-        for bar in bar_container:
-            bar.set_height(0)
-        return bar_container
+        line_collection.set_segments([])
+        line_collection.set_array(np.array([]))
+        return line_collection,
 
     def animate(i):
-        for idx, bar in enumerate(bar_container):
-            if idx <= i:
-                bar.set_height(heights[idx])
-            else:
-                bar.set_height(0)
-        return bar_container
+        if i == 0:
+            return line_collection,
+        segs = segments[:i]
+        vals = heights[:i]
+        line_collection.set_segments(segs)
+        line_collection.set_array(np.array(vals))
+        return line_collection,
 
     from matplotlib import animation
     ani = animation.FuncAnimation(fig, animate, init_func=init, frames=len(heights), interval=8, blit=True, repeat=False)
