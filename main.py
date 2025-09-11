@@ -51,9 +51,7 @@ def main():
     ax.set_xlabel('Date-Time', fontsize=14)
     ax.set_ylabel('Tide Height (m)', fontsize=14)
     ax.grid(True, linestyle='--', alpha=0.5)
-
-    # Plot points and lines
-    ax.plot(date_objs, heights, marker='o', color='#0072B2', linewidth=2, markersize=5, label='Tide Height')
+    # y-axis increases from bottom to top (default, do not invert)
 
     # Beautify x-axis
     if isinstance(date_objs[0], datetime):
@@ -64,6 +62,35 @@ def main():
         ax.set_xticks(range(0, len(dates), max(1, len(dates)//10)))
         ax.set_xticklabels([dates[i] for i in range(0, len(dates), max(1, len(dates)//10))], rotation=45)
 
+    import numpy as np
+    from matplotlib.collections import LineCollection
+
+    # Prepare for rainbow color
+    points = np.array([np.arange(len(heights)), heights]).T.reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+    norm = plt.Normalize(min(heights), max(heights))
+    cmap = plt.get_cmap('rainbow')
+
+    # For animation, we need to update a LineCollection
+    line_collection = LineCollection([], cmap=cmap, norm=norm, linewidth=2, label='Tide Height')
+    ax.add_collection(line_collection)
+
+    def init():
+        line_collection.set_segments([])
+        line_collection.set_array(np.array([]))
+        return line_collection,
+
+    def animate(i):
+        if i == 0:
+            return line_collection,
+        segs = segments[:i]
+        vals = heights[:i]
+        line_collection.set_segments(segs)
+        line_collection.set_array(np.array(vals))
+        return line_collection,
+
+    from matplotlib import animation
+    ani = animation.FuncAnimation(fig, animate, init_func=init, frames=len(heights), interval=8, blit=True, repeat=False)
     ax.legend()
     plt.tight_layout()
     plt.show()
