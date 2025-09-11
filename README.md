@@ -1,26 +1,26 @@
-# 数据可视化脚本
+# Data Visualization Script
 
-本项目为一个标准的GitHub数据可视化Python脚本示例，包含基础的项目结构和示例代码，适合快速开始数据可视化分析。
+This project is a standard GitHub Python script example for data visualization, including a basic project structure and sample code. It is suitable for quickly starting data visualization analysis.
 
-## 文件结构
-- data_viz.py：主数据可视化脚本，读取CSV并绘制图表
-- requirements.txt：依赖库列表
-- .gitignore：忽略不需要纳入版本控制的文件
-- README.md：项目说明
+## File Structure
+- data_viz.py: Main data visualization script, reads CSV and plots charts
+- requirements.txt: Dependency list
+- .gitignore: Ignore files that should not be version controlled
+- README.md: Project description
 
-## 快速开始
-1. 安装依赖：
+## Quick Start
+1. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-2. 运行脚本：
+2. Run the script:
    ```bash
    python data_viz.py
    ```
 
-## 依赖
+## Dependencies
 - pandas
 - matplotlib
 
-## 示例
-脚本会读取名为`data.csv`的文件并绘制折线图。请根据需要替换或修改数据文件。
+## Example
+The script will read a file named `data.csv` and plot a line chart. Please replace or modify the data file as needed.
