@@ -28,26 +28,43 @@ def parse_tide_heights(html_file):
     return dates, heights
 
 def main():
+    import matplotlib.dates as mdates
+    import matplotlib.font_manager as fm
+    from datetime import datetime
+
     html_file = 'crawled-page-2023.html'
     dates, heights = parse_tide_heights(html_file)
-    fig, ax = plt.subplots(figsize=(10,5))
-    ax.set_title('2023赤鱲角潮汐高度动画')
-    ax.set_xlabel('观测点序号')
-    ax.set_ylabel('潮高 (m)')
-    ax.set_ylim(min(heights)-0.2, max(heights)+0.2)
-    line, = ax.plot([], [], lw=2)
 
-    def init():
-        line.set_data([], [])
-        return line,
+    # 尝试将日期字符串转为datetime对象，便于横轴美化
+    date_fmt = "%m月%d日-%H:%M"
+    try:
+        date_objs = [datetime.strptime(d, "%m月%d日-%H:%M") for d in dates]
+    except Exception:
+        date_objs = list(range(len(dates)))  # 兜底
 
-    def animate(i):
-        x = list(range(i+1))
-        y = heights[:i+1]
-        line.set_data(x, y)
-        return line,
+    # 设置中文字体（适配macOS常见字体）
+    plt.rcParams['font.sans-serif'] = ['Heiti TC', 'Arial Unicode MS', 'SimHei']
+    plt.rcParams['axes.unicode_minus'] = False
 
-    ani = animation.FuncAnimation(fig, animate, init_func=init, frames=len(heights), interval=30, blit=True, repeat=False)
+    fig, ax = plt.subplots(figsize=(14, 6))
+    ax.set_title('2023赤鱲角潮汐高度', fontsize=18, fontweight='bold')
+    ax.set_xlabel('日期-时间', fontsize=14)
+    ax.set_ylabel('潮高 (m)', fontsize=14)
+    ax.grid(True, linestyle='--', alpha=0.5)
+
+    # 画点和线
+    ax.plot(date_objs, heights, marker='o', color='#0072B2', linewidth=2, markersize=5, label='潮高')
+
+    # 横轴美化
+    if isinstance(date_objs[0], datetime):
+        ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d\n%H:%M'))
+        fig.autofmt_xdate(rotation=45)
+    else:
+        ax.set_xticks(range(0, len(dates), max(1, len(dates)//10)))
+        ax.set_xticklabels([dates[i] for i in range(0, len(dates), max(1, len(dates)//10))], rotation=45)
+
+    ax.legend()
     plt.tight_layout()
     plt.show()
 
