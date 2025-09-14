@@ -77,49 +77,59 @@ def main():
     line_collection = LineCollection([], cmap=cmap, norm=norm, linewidth=2, label='Tide Height')
     ax.add_collection(line_collection)
 
-    # Annotation objects
-    value_text = ax.text(0.98, 0.95, '', transform=ax.transAxes, ha='right', va='top', fontsize=13, color='black', bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-    point_annot = ax.annotate('', xy=(0,0), xytext=(10,10), textcoords='offset points', fontsize=12, color='black',
+    # Draw static rainbow line
+    segs = segments
+    vals = [seg[0][1] for seg in segs] if len(segs) > 0 else []
+    line_collection.set_segments(segs)
+    line_collection.set_array(np.array(vals))
+
+    # Interactive hover annotation
+    hover_annot = ax.annotate('', xy=(0,0), xytext=(10,10), textcoords='offset points', fontsize=12, color='black',
                               bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.7), arrowprops=dict(arrowstyle='->', color='gray'))
-    point_annot.set_visible(False)
+    hover_annot.set_visible(False)
 
-    def init():
-        line_collection.set_segments([])
-        line_collection.set_array(np.array([]))
-        value_text.set_text('')
-        point_annot.set_visible(False)
-        return line_collection, value_text, point_annot
-
-    def animate(i):
-        if i == 0:
-            value_text.set_text('')
-            point_annot.set_visible(False)
-            return line_collection, value_text, point_annot
-        segs = segments[:i]
-        # Use the y value (height) for each segment for coloring
-        vals = [seg[0][1] for seg in segs] if len(segs) > 0 else []
-        line_collection.set_segments(segs)
-        line_collection.set_array(np.array(vals))
-
-        # Annotate the latest point
-        idx = i-1
-        x = x_vals[idx]
-        y = heights[idx]
-        # Show time label if possible
-        if isinstance(date_objs[0], datetime):
-            time_str = date_objs[idx].strftime('%m-%d %H:%M')
+    def on_move(event):
+        if not event.inaxes:
+            hover_annot.set_visible(False)
+            fig.canvas.draw_idle()
+            return
+        # Find closest segment
+        mouse_x, mouse_y = event.xdata, event.ydata
+        min_dist = float('inf')
+        closest_idx = None
+        for i, seg in enumerate(segs):
+            x0, y0 = seg[0]
+            x1, y1 = seg[1]
+            # Project mouse onto segment
+            dx, dy = x1-x0, y1-y0
+            if dx == dy == 0:
+                dist = np.hypot(mouse_x-x0, mouse_y-y0)
+            else:
+                t = max(0, min(1, ((mouse_x-x0)*dx + (mouse_y-y0)*dy)/(dx*dx+dy*dy)))
+                proj_x, proj_y = x0 + t*dx, y0 + t*dy
+                dist = np.hypot(mouse_x-proj_x, mouse_y-proj_y)
+            if dist < min_dist:
+                min_dist = dist
+                closest_idx = i
+        # Only show if close enough
+        if min_dist < 0.5:
+            idx = closest_idx+1 if closest_idx is not None else 0
+            if idx >= len(x_vals):
+                idx = len(x_vals)-1
+            x = x_vals[idx]
+            y = heights[idx]
+            if isinstance(date_objs[0], datetime):
+                time_str = date_objs[idx].strftime('%m-%d %H:%M')
+            else:
+                time_str = str(date_objs[idx])
+            hover_annot.xy = (x, y)
+            hover_annot.set_text(f'{time_str}\n{y:.2f} m')
+            hover_annot.set_visible(True)
         else:
-            time_str = str(date_objs[idx])
-        value_text.set_text(f'Time: {time_str}\nTide Height: {y:.2f} m')
-        value_text.set_position((0.98, 0.95))
-        # Place annotation at the latest point
-        point_annot.xy = (x, y)
-        point_annot.set_text(f'{time_str}\n{y:.2f} m')
-        point_annot.set_visible(True)
-        return line_collection, value_text, point_annot
+            hover_annot.set_visible(False)
+        fig.canvas.draw_idle()
 
-    from matplotlib import animation
-    ani = animation.FuncAnimation(fig, animate, init_func=init, frames=len(heights), interval=8, blit=True, repeat=False)
+    fig.canvas.mpl_connect('motion_notify_event', on_move)
     ax.legend()
     plt.tight_layout()
     plt.show()
