@@ -93,7 +93,7 @@ def main():
             hover_annot.set_visible(False)
             fig.canvas.draw_idle()
             return
-        # Find closest segment
+    # Find closest segment
         mouse_x, mouse_y = event.xdata, event.ydata
         min_dist = float('inf')
         closest_idx = None
@@ -111,7 +111,7 @@ def main():
             if dist < min_dist:
                 min_dist = dist
                 closest_idx = i
-        # Only show if close enough
+    # Only show if close enough
         if min_dist < 0.5:
             idx = closest_idx+1 if closest_idx is not None else 0
             if idx >= len(x_vals):
