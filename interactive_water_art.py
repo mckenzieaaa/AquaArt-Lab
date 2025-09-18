@@ -1,377 +1,345 @@
-# 交互式水质数据艺术可视化 - Interactive Water Quality Art
+# Interactive Water Quality Art Visualization - Optimized Version
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.animation as animation
 from matplotlib.widgets import Button
 from matplotlib.patches import Circle
-import random
 
-class InteractiveWaterArt:
+class WaterArtVisualization:
     def __init__(self):
-        # 设置暗色主题
         plt.style.use('dark_background')
         
-        # 创建主图和控制面板
-        self.fig = plt.figure(figsize=(18, 12))
+        # Create figure and layout
+        self.fig, self.ax = plt.subplots(figsize=(16, 12))
         
-        # 主可视化区域 (占据大部分空间)
-        self.ax_main = plt.subplot2grid((4, 6), (0, 0), colspan=6, rowspan=3)
-        
-        # 按钮控制区域 (底部)
-        button_height = 0.06
-        button_width = 0.12
-        button_y = 0.02
-        
-        # 加载数据
+        # Load data
         self.df = pd.read_csv('water_potability.csv')
         self.df = self.df.dropna()
         
-        # 水质指标
+        # Water quality indicators
         self.indicators = [col for col in self.df.columns if col != 'Potability']
-        print(f"水质指标: {self.indicators}")
-        
-        # 当前选中的指标
         self.current_indicator = self.indicators[0]
-        self.current_mode = 'galaxy'  # galaxy, particle, wave, network
+        self.current_mode = 'galaxy'
         
-        # 动画相关
-        self.ani = None
-        self.frame_count = 0
-        
-        # 颜色方案
-        self.colors = {
-            'ph': '#FF6B6B',           # 红色 - pH值
-            'Hardness': '#4ECDC4',     # 青色 - 硬度
-            'Solids': '#45B7D1',       # 蓝色 - 固体含量
-            'Chloramines': '#96CEB4',  # 绿色 - 氯胺
-            'Sulfate': '#FFEAA7',      # 黄色 - 硫酸盐
-            'Conductivity': '#DDA0DD', # 紫色 - 导电率
-            'Organic_carbon': '#98D8C8', # 浅绿 - 有机碳
-            'Trihalomethanes': '#F7DC6F', # 浅黄 - 三卤甲烷
-            'Turbidity': '#BB8FCE'     # 淡紫 - 浊度
+        # Color scheme
+        self.indicator_colors = {
+            'ph': '#FF6B6B',           # Red
+            'Hardness': '#4ECDC4',     # Cyan  
+            'Solids': '#45B7D1',       # Blue
+            'Chloramines': '#96CEB4',  # Green
+            'Sulfate': '#FFEAA7',      # Yellow
+            'Conductivity': '#DDA0DD', # Purple
+            'Organic_carbon': '#98D8C8', # Light green
+            'Trihalomethanes': '#F7DC6F', # Light yellow
+            'Turbidity': '#BB8FCE'     # Light purple
         }
         
-        # 创建按钮
-        self.create_buttons()
+        # Animation control
+        self.ani = None
+        self.frame = 0
         
-        # 初始化可视化
-        self.setup_visualization()
+        # Create control panel
+        self.create_control_panel()
         
-        print("交互式水质艺术可视化已准备就绪！")
+        # Initialize visualization
+        self.update_visualization()
+        
+        print("Interactive Water Quality Art Visualization started!")
+        print("Click left buttons to switch water quality indicators, right buttons to switch art effects")
     
-    def create_buttons(self):
-        """创建交互按钮"""
-        self.buttons = {}
-        
-        # 指标选择按钮
-        button_width = 0.10
-        button_height = 0.04
-        start_x = 0.05
-        start_y = 0.25
-        
-        for i, indicator in enumerate(self.indicators):
-            x = start_x + (i % 3) * (button_width + 0.02)
-            y = start_y - (i // 3) * (button_height + 0.015)
-            
-            ax_button = plt.axes([x, y, button_width, button_height])
-            button = Button(ax_button, indicator, 
-                          color=self.colors.get(indicator, '#888888'),
-                          hovercolor='white')
-            button.on_clicked(lambda event, ind=indicator: self.switch_indicator(ind))
-            self.buttons[f'indicator_{indicator}'] = button
-        
-        # 艺术效果模式按钮
-        modes = [
-            ('银河系', 'galaxy'),
-            ('粒子流', 'particle'), 
-            ('波纹', 'wave'),
-            ('网络', 'network')
-        ]
-        
-        mode_start_y = 0.12
-        for i, (name, mode) in enumerate(modes):
-            x = start_x + i * (button_width + 0.02)
-            y = mode_start_y
-            
-            ax_button = plt.axes([x, y, button_width, button_height])
-            button = Button(ax_button, name, 
-                          color='#444444' if mode != self.current_mode else '#FFD700',
-                          hovercolor='white')
-            button.on_clicked(lambda event, m=mode: self.switch_mode(m))
-            self.buttons[f'mode_{mode}'] = button
-    
-    def normalize_data(self, data):
-        """标准化数据"""
+    def normalize(self, data):
+        """Data normalization"""
         data = np.array(data)
         return (data - data.min()) / (data.max() - data.min() + 1e-8)
     
-    def switch_indicator(self, indicator):
-        """切换水质指标"""
-        print(f"切换到指标: {indicator}")
-        self.current_indicator = indicator
-        self.setup_visualization()
-    
-    def switch_mode(self, mode):
-        """切换艺术效果模式"""
-        print(f"切换到模式: {mode}")
-        self.current_mode = mode
+    def create_control_panel(self):
+        """Create control buttons"""
+        self.buttons = {}
         
-        # 更新模式按钮颜色
-        for mode_name in ['galaxy', 'particle', 'wave', 'network']:
-            if f'mode_{mode_name}' in self.buttons:
-                if mode_name == mode:
-                    self.buttons[f'mode_{mode_name}'].color = '#FFD700'
+        # Adjust main plot position to leave space on the right
+        self.fig.subplots_adjust(left=0.25, bottom=0.1, right=0.95, top=0.9)
+        
+        # Water quality indicator buttons (left side)
+        button_height = 0.06
+        button_width = 0.15
+        start_y = 0.85
+        
+        for i, indicator in enumerate(self.indicators):
+            y_pos = start_y - i * (button_height + 0.01)
+            ax_button = self.fig.add_axes([0.05, y_pos, button_width, button_height])
+            
+            # Button color
+            color = self.indicator_colors.get(indicator, '#888888')
+            if indicator == self.current_indicator:
+                color = 'white'
+            
+            button = Button(ax_button, indicator, color=color, hovercolor='lightgray')
+            button.on_clicked(lambda x, ind=indicator: self.change_indicator(ind))
+            self.buttons[indicator] = button
+        
+        # Art mode buttons (right side)
+        modes = [
+            ('Galaxy', 'galaxy'),
+            ('Particle', 'particle'), 
+            ('Wave', 'wave'),
+            ('Spiral', 'spiral')
+        ]
+        
+        for i, (name, mode) in enumerate(modes):
+            y_pos = start_y - i * (button_height + 0.01)
+            ax_button = self.fig.add_axes([0.97, y_pos, button_width, button_height])
+            
+            color = 'white' if mode == self.current_mode else '#555555'
+            button = Button(ax_button, name, color=color, hovercolor='lightgray')
+            button.on_clicked(lambda x, m=mode: self.change_mode(m))
+            self.buttons[f'mode_{mode}'] = button
+    
+    def change_indicator(self, indicator):
+        """Switch water quality indicator"""
+        print(f"Switched to indicator: {indicator}")
+        
+        # Update button colors
+        for ind in self.indicators:
+            if ind in self.buttons:
+                if ind == indicator:
+                    self.buttons[ind].color = 'white'
                 else:
-                    self.buttons[f'mode_{mode_name}'].color = '#444444'
+                    self.buttons[ind].color = self.indicator_colors.get(ind, '#888888')
         
-        self.setup_visualization()
+        self.current_indicator = indicator
+        self.update_visualization()
     
-    def setup_visualization(self):
-        """设置可视化"""
-        # 停止之前的动画
+    def change_mode(self, mode):
+        """Switch art mode"""
+        print(f"Switched to mode: {mode}")
+        
+        # Update mode button colors
+        modes = ['galaxy', 'particle', 'wave', 'spiral']
+        for m in modes:
+            button_key = f'mode_{m}'
+            if button_key in self.buttons:
+                if m == mode:
+                    self.buttons[button_key].color = 'white'
+                else:
+                    self.buttons[button_key].color = '#555555'
+        
+        self.current_mode = mode
+        self.update_visualization()
+    
+    def update_visualization(self):
+        """Update visualization"""
+        # Stop previous animation
         if self.ani:
             self.ani.event_source.stop()
         
-        # 清空主画布
-        self.ax_main.clear()
+        # Clear canvas
+        self.ax.clear()
         
-        # 获取当前指标数据
-        current_data = self.df[self.current_indicator]
-        normalized_data = self.normalize_data(current_data)
+        # Set style
+        self.ax.set_facecolor('#0a0a1a')
+        self.ax.set_xlim(-10, 10)
+        self.ax.set_ylim(-8, 8)
+        self.ax.set_xticks([])
+        self.ax.set_yticks([])
         
-        # 设置基本样式
-        self.ax_main.set_facecolor('#0a0a1a')
-        self.ax_main.set_xlim(-10, 10)
-        self.ax_main.set_ylim(-8, 8)
-        
-        # 根据模式创建不同的可视化
-        if self.current_mode == 'galaxy':
-            self.create_galaxy_mode(normalized_data)
-        elif self.current_mode == 'particle':
-            self.create_particle_mode(normalized_data)
-        elif self.current_mode == 'wave':
-            self.create_wave_mode(normalized_data)
-        elif self.current_mode == 'network':
-            self.create_network_mode(normalized_data)
-        
-        # 设置标题和标签
-        mode_names = {
-            'galaxy': '银河系模式',
-            'particle': '粒子流模式', 
-            'wave': '波纹模式',
-            'network': '网络模式'
-        }
-        
-        title = f'{self.current_indicator} - {mode_names[self.current_mode]}'
-        self.ax_main.set_title(title, fontsize=24, color='white', fontweight='bold', pad=20)
-        
-        # 移除坐标轴
-        self.ax_main.set_xticks([])
-        self.ax_main.set_yticks([])
-        for spine in self.ax_main.spines.values():
+        # Hide borders
+        for spine in self.ax.spines.values():
             spine.set_visible(False)
         
-        # 开始动画
-        self.frame_count = 0
-        self.ani = animation.FuncAnimation(self.fig, self.animate, 
-                                         frames=1000, interval=50, 
-                                         blit=False, repeat=True)
+        # Get current data
+        data = self.df[self.current_indicator].values
+        self.normalized_data = self.normalize(data)
+        
+        # Set title
+        mode_names = {
+            'galaxy': 'Galaxy Mode',
+            'particle': 'Particle Mode',
+            'wave': 'Wave Mode', 
+            'spiral': 'Spiral Mode'
+        }
+        
+        title = f'{self.current_indicator} - {mode_names.get(self.current_mode, self.current_mode)}'
+        self.ax.set_title(title, fontsize=20, color='white', fontweight='bold', pad=20)
+        
+        # Initialize based on mode
+        if self.current_mode == 'galaxy':
+            self.init_galaxy()
+        elif self.current_mode == 'particle':
+            self.init_particle()
+        elif self.current_mode == 'wave':
+            self.init_wave()
+        elif self.current_mode == 'spiral':
+            self.init_spiral()
+        
+        # Start animation
+        self.frame = 0
+        self.ani = animation.FuncAnimation(
+            self.fig, self.animate, frames=1000, 
+            interval=80, blit=False, repeat=True
+        )
         
         plt.draw()
     
-    def create_galaxy_mode(self, data):
-        """创建银河系模式"""
-        num_points = len(data)
+    def init_galaxy(self):
+        """Initialize galaxy mode"""
+        n_points = len(self.normalized_data)
         
-        # 创建螺旋坐标
-        t = np.linspace(0, 6 * np.pi, num_points)
-        r = 1 + 4 * data  # 半径由数据决定
+        # Create spiral arms
+        t = np.linspace(0, 4 * np.pi, n_points)
+        r = 1 + 3 * self.normalized_data
         
-        self.galaxy_x = r * np.cos(t) + np.random.normal(0, 0.3, num_points)
-        self.galaxy_y = r * np.sin(t) + np.random.normal(0, 0.3, num_points)
+        self.x = r * np.cos(t) + np.random.normal(0, 0.2, n_points)
+        self.y = r * np.sin(t) + np.random.normal(0, 0.2, n_points)
         
-        # 点的属性
-        sizes = data * 80 + 20
-        color = self.colors.get(self.current_indicator, '#888888')
+        # Point size and color
+        sizes = self.normalized_data * 60 + 20
+        color = self.indicator_colors.get(self.current_indicator, '#888888')
         
-        self.scatter = self.ax_main.scatter(self.galaxy_x, self.galaxy_y, 
-                                          s=sizes, c=color, alpha=0.7,
-                                          edgecolors='white', linewidths=0.5)
+        self.scatter = self.ax.scatter(self.x, self.y, s=sizes, c=color, 
+                                     alpha=0.7, edgecolors='white', linewidths=0.5)
         
-        # 添加中心黑洞
-        center = Circle((0, 0), 0.5, color='black', alpha=0.9)
-        self.ax_main.add_patch(center)
+        # Central black hole
+        center = Circle((0, 0), 0.8, color='black', alpha=0.8)
+        self.ax.add_patch(center)
     
-    def create_particle_mode(self, data):
-        """创建粒子流模式"""
-        num_points = len(data)
+    def init_particle(self):
+        """Initialize particle mode"""
+        n_points = len(self.normalized_data)
         
-        # 随机初始位置
-        self.particle_x = np.random.uniform(-8, 8, num_points)
-        self.particle_y = np.random.uniform(-6, 6, num_points)
+        # Random initial positions
+        self.x = np.random.uniform(-8, 8, n_points)
+        self.y = np.random.uniform(-6, 6, n_points)
         
-        # 速度由数据决定
-        self.velocities = data * 0.2 + 0.05
+        # Velocity
+        self.vx = (self.normalized_data - 0.5) * 0.2
+        self.vy = np.random.uniform(-0.1, 0.1, n_points)
         
-        sizes = data * 60 + 15
-        color = self.colors.get(self.current_indicator, '#888888')
+        sizes = self.normalized_data * 40 + 10
+        color = self.indicator_colors.get(self.current_indicator, '#888888')
         
-        self.scatter = self.ax_main.scatter(self.particle_x, self.particle_y,
-                                          s=sizes, c=color, alpha=0.8)
+        self.scatter = self.ax.scatter(self.x, self.y, s=sizes, c=color, alpha=0.8)
     
-    def create_wave_mode(self, data):
-        """创建波纹模式"""
-        x = np.linspace(-10, 10, len(data))
+    def init_wave(self):
+        """Initialize wave mode"""
+        x = np.linspace(-10, 10, len(self.normalized_data))
         self.wave_x = x
-        self.wave_base_y = data * 4 - 2  # 基础高度由数据决定
+        self.base_y = (self.normalized_data - 0.5) * 4
         
-        color = self.colors.get(self.current_indicator, '#888888')
-        self.line, = self.ax_main.plot(x, self.wave_base_y, 
-                                      color=color, linewidth=3, alpha=0.8)
+        color = self.indicator_colors.get(self.current_indicator, '#888888')
+        self.line, = self.ax.plot(x, self.base_y, color=color, linewidth=3, alpha=0.9)
         
-        # 添加多层波纹效果
+        # Multi-layer waves
         self.wave_lines = []
-        for i in range(5):
-            line, = self.ax_main.plot(x, self.wave_base_y + i * 0.5, 
-                                    color=color, linewidth=2-i*0.3, 
-                                    alpha=0.6-i*0.1)
+        for i in range(3):
+            line, = self.ax.plot(x, self.base_y + i*0.5, 
+                               color=color, linewidth=2-i*0.5, alpha=0.6-i*0.15)
             self.wave_lines.append(line)
     
-    def create_network_mode(self, data):
-        """创建网络模式"""
-        num_points = min(50, len(data))  # 限制点数以提高性能
+    def init_spiral(self):
+        """Initialize spiral mode"""
+        n_points = len(self.normalized_data)
         
-        # 创建网格位置
-        indices = np.linspace(0, len(data)-1, num_points, dtype=int)
-        selected_data = data[indices]
+        # Double helix structure
+        t = np.linspace(0, 6 * np.pi, n_points)
+        r = 0.5 + 2 * self.normalized_data
         
-        # 网格坐标
-        grid_size = int(np.sqrt(num_points))
-        if grid_size == 0:
-            grid_size = 1
+        self.x1 = r * np.cos(t)
+        self.y1 = r * np.sin(t)
+        self.x2 = r * np.cos(t + np.pi)  # Reverse spiral
+        self.y2 = r * np.sin(t + np.pi)
         
-        actual_points = grid_size * grid_size
-        x_pos = np.tile(np.linspace(-8, 8, grid_size), grid_size)[:actual_points]
-        y_pos = np.repeat(np.linspace(-6, 6, grid_size), grid_size)[:actual_points]
+        sizes = self.normalized_data * 50 + 15
+        color = self.indicator_colors.get(self.current_indicator, '#888888')
         
-        # 确保数据长度匹配
-        selected_data = selected_data[:actual_points]
-        
-        self.network_x = x_pos
-        self.network_y = y_pos
-        self.network_data = selected_data
-        
-        # 绘制节点
-        sizes = selected_data * 100 + 30
-        color = self.colors.get(self.current_indicator, '#888888')
-        
-        self.scatter = self.ax_main.scatter(self.network_x, self.network_y,
-                                          s=sizes, c=color, alpha=0.8,
-                                          edgecolors='white', linewidths=1)
-        
-        # 绘制连接线（连接相似数值的点）
-        self.network_lines = []
-        threshold = 0.3
-        for i in range(len(selected_data)):
-            for j in range(i+1, len(selected_data)):
-                if abs(selected_data[i] - selected_data[j]) < threshold:
-                    line, = self.ax_main.plot([x_pos[i], x_pos[j]], 
-                                            [y_pos[i], y_pos[j]], 
-                                            color=color, alpha=0.3, linewidth=1)
-                    self.network_lines.append(line)
+        self.scatter1 = self.ax.scatter(self.x1, self.y1, s=sizes, c=color, alpha=0.7)
+        self.scatter2 = self.ax.scatter(self.x2, self.y2, s=sizes, c=color, alpha=0.5)
     
-    def animate(self, frame):
-        """动画更新函数"""
-        self.frame_count += 1
+    def animate(self, frame_num):
+        """Animation update"""
+        self.frame += 1
         
         if self.current_mode == 'galaxy':
-            return self.animate_galaxy(frame)
+            return self.animate_galaxy()
         elif self.current_mode == 'particle':
-            return self.animate_particle(frame)
+            return self.animate_particle()
         elif self.current_mode == 'wave':
-            return self.animate_wave(frame)
-        elif self.current_mode == 'network':
-            return self.animate_network(frame)
+            return self.animate_wave()
+        elif self.current_mode == 'spiral':
+            return self.animate_spiral()
         
         return []
     
-    def animate_galaxy(self, frame):
-        """银河系动画"""
-        # 旋转效果
-        angle = frame * 0.02
+    def animate_galaxy(self):
+        """Galaxy animation"""
+        # Rotation
+        angle = self.frame * 0.02
         cos_a, sin_a = np.cos(angle), np.sin(angle)
         
-        rotated_x = self.galaxy_x * cos_a - self.galaxy_y * sin_a
-        rotated_y = self.galaxy_x * sin_a + self.galaxy_y * cos_a
+        new_x = self.x * cos_a - self.y * sin_a
+        new_y = self.x * sin_a + self.y * cos_a
         
-        self.scatter.set_offsets(np.column_stack((rotated_x, rotated_y)))
-        
-        # 呼吸效果
-        breathing = 1 + 0.2 * np.sin(frame * 0.1)
-        current_sizes = self.scatter.get_sizes() * breathing
-        self.scatter.set_sizes(current_sizes)
+        self.scatter.set_offsets(np.column_stack([new_x, new_y]))
         
         return [self.scatter]
     
-    def animate_particle(self, frame):
-        """粒子流动画"""
-        # 更新粒子位置
-        angle_offset = frame * 0.05
-        for i in range(len(self.particle_x)):
-            angle = angle_offset + i * 0.1
-            self.particle_x[i] += np.cos(angle) * self.velocities[i]
-            self.particle_y[i] += np.sin(angle) * self.velocities[i] * 0.5
-            
-            # 边界处理
-            if abs(self.particle_x[i]) > 8:
-                self.particle_x[i] = -8 if self.particle_x[i] > 0 else 8
-            if abs(self.particle_y[i]) > 6:
-                self.particle_y[i] = -6 if self.particle_y[i] > 0 else 6
+    def animate_particle(self):
+        """Particle animation"""
+        # Update positions
+        self.x += self.vx
+        self.y += self.vy
         
-        self.scatter.set_offsets(np.column_stack((self.particle_x, self.particle_y)))
+        # Boundary bounce
+        self.vx = np.where((self.x < -8) | (self.x > 8), -self.vx, self.vx)
+        self.vy = np.where((self.y < -6) | (self.y > 6), -self.vy, self.vy)
+        
+        self.scatter.set_offsets(np.column_stack([self.x, self.y]))
+        
         return [self.scatter]
     
-    def animate_wave(self, frame):
-        """波纹动画"""
-        # 创建波浪效果
-        wave_offset = frame * 0.2
+    def animate_wave(self):
+        """Wave animation"""
+        wave_phase = self.frame * 0.2
         
-        # 主波浪
-        y = self.wave_base_y + 2 * np.sin(self.wave_x * 0.5 + wave_offset)
+        # Main wave
+        y = self.base_y + 2 * np.sin(self.wave_x * 0.5 + wave_phase)
         self.line.set_ydata(y)
         
-        # 多层波纹
+        # Additional waves
         for i, line in enumerate(self.wave_lines):
-            phase_shift = i * np.pi / 4
-            amplitude = 1.5 - i * 0.2
-            y_layer = (self.wave_base_y + 
-                      amplitude * np.sin(self.wave_x * 0.5 + wave_offset + phase_shift))
-            line.set_ydata(y_layer)
+            phase_offset = i * np.pi / 3
+            amplitude = 1.5 - i * 0.3
+            y_wave = self.base_y + amplitude * np.sin(self.wave_x * 0.5 + wave_phase + phase_offset)
+            line.set_ydata(y_wave)
         
         return [self.line] + self.wave_lines
     
-    def animate_network(self, frame):
-        """网络动画"""
-        # 节点脉冲效果
-        pulse = 1 + 0.3 * np.sin(frame * 0.1 + self.network_data * 10)
-        current_sizes = (self.network_data * 100 + 30) * pulse
-        self.scatter.set_sizes(current_sizes)
+    def animate_spiral(self):
+        """Spiral animation"""
+        # Double helix rotation
+        angle1 = self.frame * 0.03
+        angle2 = self.frame * 0.03 + np.pi
         
-        # 连接线透明度变化
-        alpha_base = 0.3 + 0.2 * np.sin(frame * 0.05)
-        for line in self.network_lines:
-            line.set_alpha(alpha_base)
+        cos_a1, sin_a1 = np.cos(angle1), np.sin(angle1)
+        cos_a2, sin_a2 = np.cos(angle2), np.sin(angle2)
         
-        return [self.scatter] + self.network_lines
+        new_x1 = self.x1 * cos_a1 - self.y1 * sin_a1
+        new_y1 = self.x1 * sin_a1 + self.y1 * cos_a1
+        
+        new_x2 = self.x2 * cos_a2 - self.y2 * sin_a2
+        new_y2 = self.x2 * sin_a2 + self.y2 * cos_a2
+        
+        self.scatter1.set_offsets(np.column_stack([new_x1, new_y1]))
+        self.scatter2.set_offsets(np.column_stack([new_x2, new_y2]))
+        
+        return [self.scatter1, self.scatter2]
     
     def show(self):
-        """显示可视化"""
-        plt.tight_layout()
+        """Show visualization"""
         plt.show()
 
-# 创建并运行交互式可视化
+# Launch application
 if __name__ == "__main__":
-    print("正在启动交互式水质艺术可视化...")
-    art = InteractiveWaterArt()
-    art.show()
+    print("Starting Interactive Water Quality Art Visualization...")
+    app = WaterArtVisualization()
+    app.show()
