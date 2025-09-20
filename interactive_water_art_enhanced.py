@@ -12,7 +12,8 @@ class EnhancedWaterArtVisualization:
         plt.style.use('dark_background')
         
         # Create figure with 16:9 aspect ratio (1920x1080 optimized)
-        self.fig = plt.figure(figsize=(19.2, 10.8))
+        # Create figure with 16:9 aspect ratio, suitable for 11-inch screen (1280x720)
+        self.fig = plt.figure(figsize=(12.8, 7.2))
         
         # Main visualization area
         self.ax_main = plt.subplot2grid((4, 6), (0, 1), colspan=4, rowspan=3)
